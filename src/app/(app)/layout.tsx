@@ -10,6 +10,7 @@ const NAV = [
   { href: '/', label: 'Home' },
   { href: '/create', label: 'Create ad' },
   { href: '/campaigns', label: 'Campaigns' },
+  { href: '/media', label: 'Media' },
 ];
 
 function AccountMenu() {

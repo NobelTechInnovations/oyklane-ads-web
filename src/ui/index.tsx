@@ -1,4 +1,13 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+'use client';
+
+import { useEffect } from 'react';
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from 'react';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary';
@@ -85,16 +94,22 @@ export function RadioOption(props: {
   );
 }
 
-export function Toggle(props: { label: string; checked: boolean; onChange: (on: boolean) => void }) {
+export function Toggle(props: {
+  label: string;
+  checked: boolean;
+  onChange: (on: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={props.checked}
       aria-label={props.label}
+      disabled={props.disabled}
       onClick={() => props.onChange(!props.checked)}
       className={
-        'relative h-6 w-10 flex-none cursor-pointer rounded-full transition-colors ' +
+        'relative h-6 w-10 flex-none cursor-pointer rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ' +
         (props.checked ? 'bg-brand' : 'bg-[#c9ced5]')
       }
     >
@@ -173,6 +188,92 @@ export function DataTable(props: { columns: string[]; rows: ReactNode[][]; leftC
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const INPUT =
+  'w-full rounded-lg border border-line bg-white px-3 py-2 outline-none focus:border-brand disabled:bg-soft';
+
+/** Label above a control, with an optional helper line below. */
+export function Field(props: { label: string; htmlFor?: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="mb-4">
+      <label htmlFor={props.htmlFor} className="mb-1.5 block text-sm font-semibold">
+        {props.label}
+      </label>
+      {props.children}
+      {props.hint ? <div className="mt-1 text-[13px] text-mute">{props.hint}</div> : null}
+    </div>
+  );
+}
+
+export function TextInput({ className = '', ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={INPUT + ' ' + className} {...rest} />;
+}
+
+export function TextArea({ className = '', ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={INPUT + ' min-h-24 ' + className} {...rest} />;
+}
+
+export function Select({ className = '', ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={INPUT + ' cursor-pointer ' + className} {...rest} />;
+}
+
+const BANNER = {
+  danger: 'border-danger/30 bg-danger/5 text-danger',
+  info: 'border-line bg-soft text-ink',
+  ok: 'border-ok/30 bg-ok/5 text-ok',
+};
+
+export function Banner(props: { tone: keyof typeof BANNER; children: ReactNode }) {
+  return (
+    <div role={props.tone === 'danger' ? 'alert' : 'status'} className={'mb-4 rounded-lg border px-4 py-3 text-sm ' + BANNER[props.tone]}>
+      {props.children}
+    </div>
+  );
+}
+
+/** Small removable tag, e.g. a chosen location. */
+export function Chip(props: { children: ReactNode; onRemove?: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-soft px-3 py-1 text-sm">
+      {props.children}
+      {props.onRemove ? (
+        <button type="button" aria-label="Remove" onClick={props.onRemove} className="cursor-pointer text-mute hover:text-ink">
+          ×
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+/** Centred dialog over a dimmed page. Escape or the close button closes it. */
+export function Modal(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+  const { onClose } = props;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={props.title}
+        onClick={(event) => event.stopPropagation()}
+        className="flex max-h-[90vh] w-full max-w-[820px] flex-col rounded-xl bg-white shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 className="text-lg font-bold">{props.title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="cursor-pointer text-2xl leading-none text-mute">
+            ×
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 py-4">{props.children}</div>
+        {props.footer ? <div className="flex justify-end gap-3 border-t border-line px-5 py-3.5">{props.footer}</div> : null}
+      </div>
     </div>
   );
 }
