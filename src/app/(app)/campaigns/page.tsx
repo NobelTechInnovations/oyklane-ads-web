@@ -67,6 +67,14 @@ export default function CampaignsPage() {
     void load(null);
   }, [load]);
 
+  // While something is being sent or reviewed, look again every few seconds.
+  const waiting = rows.some((r) => r.effective.state === 'publishing' || r.effective.state === 'in_review');
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setTimeout(() => void load(null), 8000);
+    return () => clearTimeout(timer);
+  }, [waiting, load, rows]);
+
   const setStatus = async (row: Row, status: ConfiguredStatus) => {
     try {
       const path = PATHS[level] + '/{id}';

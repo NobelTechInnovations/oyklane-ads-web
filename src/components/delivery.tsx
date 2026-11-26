@@ -9,13 +9,17 @@ const LABELS: Record<Effective['state'], string> = {
   scheduled: 'Scheduled',
   in_review: 'In review',
   rejected: 'Rejected',
+  publishing: 'Publishing',
+  error: 'Error',
   active: 'Active',
 };
 const TONES = {
   active: 'ok',
   scheduled: 'warn',
   in_review: 'warn',
+  publishing: 'warn',
   rejected: 'danger',
+  error: 'danger',
 } as const;
 
 /** The "Delivery" column: what is really happening, and why. */

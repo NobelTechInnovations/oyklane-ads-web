@@ -6,7 +6,7 @@ export type Ratio = 'square' | 'portrait' | 'landscape' | 'story';
 export type CallToAction = 'shop_now' | 'learn_more' | 'sign_up' | 'contact_us' | 'book_now' | 'whatsapp';
 
 export interface Effective {
-  state: 'draft' | 'paused' | 'archived' | 'ended' | 'scheduled' | 'in_review' | 'rejected' | 'active';
+  state: 'draft' | 'paused' | 'archived' | 'ended' | 'scheduled' | 'in_review' | 'rejected' | 'publishing' | 'error' | 'active';
   reason: string;
 }
 
@@ -80,6 +80,14 @@ export interface Ad {
   current: AdContent & { id: string; number: number; reviewState: 'draft' | 'in_review' | 'approved' | 'rejected' };
   liveVersionId: string | null;
   effective: Effective;
+  deliveries: {
+    network: string;
+    networkKey: string;
+    state: 'queued' | 'in_network_review' | 'live' | 'rejected' | 'error';
+    reason: string | null;
+    versionId: string;
+    syncedAt: string | null;
+  }[];
 }
 
 export interface Crop {

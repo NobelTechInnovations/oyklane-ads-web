@@ -11,6 +11,7 @@ import { ApiError, errorText, unwrap } from '@/api/request';
 import type { Ad, AdSet, Asset, AssetIssue, CallToAction, Campaign, Location, Network, Objective } from '@/api/types';
 import { AdPreview, CTA_LABELS } from '@/components/ad-preview';
 import { AiWriter } from '@/components/ai-writer';
+import { Delivery } from '@/components/delivery';
 import { LocationPicker } from '@/components/location-picker';
 import { MediaPicker } from '@/components/media-picker';
 import { Banner, Button, Field, Modal, RadioOption, Section, Select, Status, TextArea, TextInput, Toggle } from '@/ui';
@@ -139,6 +140,8 @@ function CreateFlow() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [problems, setProblems] = useState<string[]>([]);
+  const [loadedAd, setLoadedAd] = useState<Ad | null>(null);
   const [notice, setNotice] = useState('');
   const [picking, setPicking] = useState(false);
   const [editingExisting] = useState(() => Boolean(params.get('campaign') || params.get('adSet') || params.get('ad')));
@@ -155,7 +158,7 @@ function CreateFlow() {
         const assets = await Promise.all(
           loaded.current.assetIds.map((id) => unwrap<Asset>(api.GET('/v1/ad-accounts/{accountId}/assets/{id}', byId(id)))),
         );
-        if (!cancelled) (setAd(adForm(loaded)), setMedia(assets));
+        if (!cancelled) (setAd(adForm(loaded)), setMedia(assets), setLoadedAd(loaded));
       }
       if (adSetId) {
         const loaded = await unwrap<AdSet>(api.GET('/v1/ad-accounts/{accountId}/ad-sets/{id}', byId(adSetId)));
@@ -205,11 +208,13 @@ function CreateFlow() {
   const run = async (action: () => Promise<void>) => {
     setSaving(true);
     setError('');
+    setProblems([]);
     setNotice('');
     try {
       await action();
     } catch (caught) {
       setError(errorText(caught));
+      if (caught instanceof ApiError && caught.problems.length > 1) setProblems(caught.problems.map((p) => p.message));
     } finally {
       setSaving(false);
     }
@@ -259,7 +264,7 @@ function CreateFlow() {
       go({ ...ids, adSet: saved.id }, 2);
     });
 
-  const saveAd = (close: boolean) =>
+  const saveAd = (mode: 'draft' | 'publish') =>
     run(async () => {
       const body = {
         name: ad.name.trim(),
@@ -276,8 +281,14 @@ function CreateFlow() {
       const saved = ids.ad
         ? await unwrap<Ad>(api.PATCH('/v1/ad-accounts/{accountId}/ads/{id}', { params: { path: { accountId, id: ids.ad } }, body }))
         : await unwrap<Ad>(api.POST('/v1/ad-accounts/{accountId}/ads', { params: { path: { accountId } }, body: { ...body, adSetId: ids.adSet! } }));
-      if (close) return router.push('/campaigns');
+      setLoadedAd(saved);
       go({ ...ids, ad: saved.id }, 2);
+      if (mode === 'publish') {
+        await unwrap(
+          api.POST('/v1/ad-accounts/{accountId}/ads/{id}/publish', { params: { path: { accountId, id: saved.id } } }),
+        );
+        return router.push('/campaigns');
+      }
       setNotice(`Saved as version ${saved.current.number}.`);
     });
 
@@ -485,6 +496,11 @@ function CreateFlow() {
 
           {step === 2 ? (
             <>
+              {loadedAd?.liveVersionId ? (
+                <Banner tone="info">
+                  This ad is published. Saving changes makes a new version; the published one keeps running until you publish again.
+                </Banner>
+              ) : null}
               <Section title="Ad name">
                 <TextInput id="ad-name" aria-label="Ad name" value={ad.name} maxLength={150} onChange={(e) => setAd({ ...ad, name: e.target.value })} />
               </Section>
@@ -585,7 +601,18 @@ function CreateFlow() {
           ) : null}
 
           <div className="sticky bottom-0 z-10 -mx-1 mt-3 rounded-lg border border-line bg-white/95 px-3 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] backdrop-blur">
-            {error ? <Banner tone="danger">{error}</Banner> : null}
+            {error ? (
+              <Banner tone="danger">
+                {error}
+                {problems.length ? (
+                  <ul className="mt-1 list-disc pl-5">
+                    {problems.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </Banner>
+            ) : null}
             {notice ? <Banner tone="ok">{notice}</Banner> : null}
           <div className="flex flex-wrap items-center gap-2">
             {step > 0 ? <Button onClick={() => setStep(step - 1)}>Back</Button> : null}
@@ -601,15 +628,15 @@ function CreateFlow() {
             ) : null}
             {step === 2 ? (
               <>
-                <Button disabled={!canEdit || saving} onClick={() => saveAd(false)}>
+                <Button disabled={!canEdit || saving} onClick={() => saveAd('draft')}>
                   Save draft
                 </Button>
-                <Button variant="primary" disabled={!canEdit || saving} onClick={() => saveAd(true)}>
-                  {saving ? 'Saving…' : 'Save and close'}
+                <Button variant="primary" disabled={!canEdit || saving} onClick={() => saveAd('publish')}>
+                  {saving ? 'Publishing…' : 'Publish'}
                 </Button>
               </>
             ) : null}
-            {step === 2 ? <span className="text-[12px] text-mute">Submitting to networks for review comes in the next update.</span> : null}
+            {step === 2 ? <span className="text-[12px] text-mute">Publish runs the checks, then sends the ad to every network you switched on.</span> : null}
           </div>
           </div>
         </div>
@@ -628,6 +655,20 @@ function CreateFlow() {
             destinationUrl={ad.destinationUrl}
           />
           </div>
+          {loadedAd?.deliveries.length ? (
+            <div className="rounded-lg border border-line bg-white p-3">
+              <h2 className="mb-1 text-[14px] font-semibold">Delivery</h2>
+              <Delivery effective={loadedAd.effective} />
+              <ul className="mt-2 space-y-1 text-[12px]">
+                {loadedAd.deliveries.map((d) => (
+                  <li key={d.networkKey} className="flex justify-between gap-2">
+                    <span>{d.network}</span>
+                    <span className="text-mute">{d.state.replace(/_/g, ' ')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {step === 2 ? (
             <div className="rounded-lg border border-line bg-white p-3">
               <Readiness networks={chosen} media={media} ad={ad} />

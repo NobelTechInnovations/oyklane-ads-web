@@ -3,6 +3,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Every problem the API found, e.g. all the checks a publish failed. */
+    readonly problems: { path: string; message: string }[] = [],
   ) {
     super(message);
   }
@@ -34,7 +36,10 @@ export async function unwrap<T>(
   } catch {
     throw new ApiError('We could not reach Oyklane Ads. Check your connection and try again.', 0);
   }
-  if (!result.response.ok) throw new ApiError(problemText(result.error), result.response.status);
+  if (!result.response.ok) {
+    const problems = (result.error as Problem | undefined)?.errors ?? [];
+    throw new ApiError(problemText(result.error), result.response.status, problems);
+  }
   return result.data as T;
 }
 
