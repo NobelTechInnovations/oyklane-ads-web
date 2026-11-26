@@ -1,0 +1,15 @@
+# Merchant app on the Lightsail server, behind the shared Caddy proxy (~/apps/proxy).
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+name: oyklane-ads-web
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://ads-api.oyklane.com
+    restart: unless-stopped
+    networks:
+      web: { aliases: [oyklane-ads-web] }   # the proxy reaches it by this name
+networks:
+  web: { external: true }

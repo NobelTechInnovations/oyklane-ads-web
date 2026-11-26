@@ -1,0 +1,6 @@
+# Copied to ~/apps/proxy/sites/oyklane-ads-web.caddy on the server.
+# adsmanager.oyklane.com has an A record to the server; the certificate is automatic.
+adsmanager.oyklane.com {
+	encode gzip
+	reverse_proxy oyklane-ads-web:3100
+}
