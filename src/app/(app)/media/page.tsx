@@ -35,7 +35,7 @@ export default function MediaPage() {
     <>
       <PageHeader
         title="Media"
-        subtitle="Images for your ads. Each one is cut to 1:1, 4:5, 1.91:1 and 9:16; adjust any crop."
+        subtitle="Compressed and stored once; cut to 1:1, 4:5, 1.91:1 and 9:16. Click an image to adjust a crop."
         actions={
           canEdit ? (
             <UploadButton
@@ -47,11 +47,11 @@ export default function MediaPage() {
         }
       />
       {library.error ? <Banner tone="danger">{library.error}</Banner> : null}
-      {library.loading ? <p className="text-mute">Loading…</p> : null}
+      {library.loading ? <p className="text-[13px] text-mute">Loading…</p> : null}
       {!library.loading && library.items.length === 0 ? (
-        <p className="text-mute">No images yet. JPEG, PNG or WebP up to 30 MB.</p>
+        <p className="rounded-lg border border-dashed border-line bg-white p-8 text-center text-[13px] text-mute">No images yet. JPEG, PNG or WebP up to 30 MB.</p>
       ) : null}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-9">
         {library.items.map((asset) => (
           <Thumbnail key={asset.id} accountId={accountId} asset={asset} onClick={() => void show(asset)} />
         ))}

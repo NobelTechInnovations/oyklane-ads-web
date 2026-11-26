@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { assetFileUrl } from '@/api/assets';
+import { assetUrl } from '@/api/assets';
 import type { Asset, CallToAction, Ratio } from '@/api/types';
 import { Tabs } from '@/ui';
 
@@ -38,7 +38,7 @@ export function AdPreview(props: {
   const [placement, setPlacement] = useState('Feed');
   const ratio = PLACEMENTS[placement]!;
   const image = props.asset ? (
-    <img src={assetFileUrl(props.accountId, props.asset, ratio)} alt="" className="h-full w-full object-cover" />
+    <img src={assetUrl(props.asset, ratio)} alt="" className="h-full w-full object-cover" />
   ) : (
     <div className="grid h-full w-full place-items-center bg-soft text-sm text-mute">Add media to see it here</div>
   );

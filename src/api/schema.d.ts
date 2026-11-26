@@ -647,6 +647,7 @@ export interface paths {
                                 /** @enum {string} */
                                 type: "country" | "state" | "city" | "pincode";
                                 value: string;
+                                label?: string;
                             }[];
                             ageMin: number;
                             ageMax: number;
@@ -750,6 +751,7 @@ export interface paths {
                                 /** @enum {string} */
                                 type: "country" | "state" | "city" | "pincode";
                                 value: string;
+                                label?: string;
                             }[];
                             ageMin: number;
                             ageMax: number;
@@ -1102,7 +1104,203 @@ export interface paths {
                 path: {
                     accountId: string;
                     id: string;
-                    file: "original" | "square" | "portrait" | "landscape" | "story";
+                    file: "original" | "square" | "portrait" | "landscape" | "story" | "thumb";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ad-accounts/{accountId}/ai/ad-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    accountId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        product: string;
+                        /** @default  */
+                        businessName?: string;
+                        /** @enum {string} */
+                        objective: "sales" | "traffic" | "leads" | "awareness";
+                        /** @default  */
+                        destinationUrl?: string;
+                        /** @default  */
+                        audience?: string;
+                        /** @default en */
+                        language?: string;
+                        /**
+                         * @default friendly
+                         * @enum {string}
+                         */
+                        tone?: "friendly" | "premium" | "urgent" | "informative";
+                        networks: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/locations/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/locations/countries/{country}/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    country: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/locations/states/{state}/cities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    state: string;
                 };
                 cookie?: never;
             };

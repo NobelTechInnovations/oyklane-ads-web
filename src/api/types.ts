@@ -28,8 +28,12 @@ export interface Campaign {
 
 export interface Location {
   type: 'country' | 'state' | 'city' | 'pincode';
+  /** Country "IN", state "IN-MH", city "IN-MH:Mumbai", or a PIN code. */
   value: string;
+  label?: string;
 }
+
+export type AssetFile = 'original' | Ratio | 'thumb';
 
 export interface Audience {
   version: 1;
@@ -102,6 +106,8 @@ export interface Asset {
   variants: { ratio: Ratio; crop: Crop; width: number; height: number }[];
   archived: boolean;
   updatedAt: string;
+  /** Public Azure addresses, or API paths when files are served by the API. */
+  urls: Record<AssetFile, string>;
   issues: AssetIssue[];
   usedBy?: { adId: string; adName: string }[];
 }

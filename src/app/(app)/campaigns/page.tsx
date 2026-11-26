@@ -8,7 +8,7 @@ import { rupees } from '@/api/format';
 import { errorText, unwrap } from '@/api/request';
 import type { Ad, AdSet, Campaign, ConfiguredStatus, Page } from '@/api/types';
 import { Delivery } from '@/components/delivery';
-import { Banner, Button, Chip, DataTable, PageHeader, Tabs, Toggle } from '@/ui';
+import { Banner, Button, Chip, DataTable, PageHeader, Select, Tabs, TextInput, Toggle } from '@/ui';
 
 type Level = 'Campaigns' | 'Ad sets' | 'Ads';
 type Row = Campaign | AdSet | Ad;
@@ -33,6 +33,8 @@ export default function CampaignsPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [show, setShow] = useState<'all' | 'active' | 'off' | 'draft'>('all');
 
   const load = useCallback(
     async (more: string | null) => {
@@ -102,7 +104,14 @@ export default function CampaignsPage() {
     return `v${ad.current.number} · ${ad.current.reviewState.replace('_', ' ')}`;
   };
 
-  const tableRows = rows.map((row) => [
+  const visible = rows.filter((row) => {
+    if (search && !row.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    if (show === 'active') return row.status === 'active';
+    if (show === 'off') return row.status === 'paused';
+    if (show === 'draft') return row.status === 'draft';
+    return row.status !== 'archived';
+  });
+  const tableRows = visible.map((row) => [
     <Toggle
       key="on"
       label={`Turn ${row.name} on or off`}
@@ -116,12 +125,12 @@ export default function CampaignsPage() {
           {row.name}
         </Link>
       ) : (
-        <button type="button" onClick={() => open(row)} className="cursor-pointer text-left font-medium text-brand">
+        <button type="button" onClick={() => open(row)} className="cursor-pointer text-left font-semibold text-brand hover:underline">
           {row.name}
         </button>
       )}
-      <div className="text-[13px]">
-        <Link href={editLink(row)} className="text-mute hover:text-ink">
+      <div className="text-[12px]">
+        <Link href={editLink(row)} className="text-mute hover:text-brand">
           Edit
         </Link>
       </div>
@@ -133,17 +142,30 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Campaigns"
-        actions={
-          canEdit ? (
-            <Link href="/create" className="rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white">
-              Create
-            </Link>
-          ) : null
-        }
-      />
-      <div className="mb-3.5 flex flex-wrap items-center gap-3">
+      <PageHeader title="Campaigns" subtitle="Campaign › Ad set › Ad, across every connected network." />
+      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white p-2">
+        {canEdit ? (
+          <Link href="/create" className="rounded-md bg-brand px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-dark">
+            + Create
+          </Link>
+        ) : null}
+        <TextInput
+          aria-label="Search by name"
+          className="max-w-64"
+          placeholder={`Search ${level.toLowerCase()} by name`}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select aria-label="Show" className="max-w-40" value={show} onChange={(e) => setShow(e.target.value as typeof show)}>
+          <option value="all">All (not archived)</option>
+          <option value="active">On</option>
+          <option value="off">Off</option>
+          <option value="draft">Drafts</option>
+        </Select>
+        <span className="flex-1" />
+        <span className="text-[12px] text-mute">Last 7 days</span>
+      </div>
+      <div className="mb-2 flex flex-wrap items-center gap-3">
         <Tabs items={LEVELS} active={level} onChange={(item) => setLevel(item as Level)} />
         {campaign && level !== 'Campaigns' ? (
           <Chip onRemove={() => (setCampaign(null), setAdSet(null))}>Campaign: {campaign.name}</Chip>
@@ -155,17 +177,18 @@ export default function CampaignsPage() {
         columns={['Off / On', level.replace(/s$/, ''), 'Delivery', THIRD[level], ...METRICS]}
         leftColumns={4}
         rows={tableRows}
+        footer={['', `${visible.length} ${level.toLowerCase()}`, '', '', ...METRICS.map(() => '—')]}
       />
-      {loading ? <p className="mt-4 text-mute">Loading…</p> : null}
-      {!loading && rows.length === 0 ? (
-        <p className="mt-4 text-mute">Nothing here yet. Create your first ad to see it listed.</p>
+      {loading ? <p className="mt-3 text-[13px] text-mute">Loading…</p> : null}
+      {!loading && visible.length === 0 ? (
+        <p className="mt-3 text-[13px] text-mute">{rows.length ? 'Nothing matches these filters.' : 'Nothing here yet. Create your first ad to see it listed.'}</p>
       ) : null}
       {cursor && !loading ? (
         <div className="mt-4">
           <Button onClick={() => void load(cursor)}>Load more</Button>
         </div>
       ) : null}
-      <p className="mt-6 text-[13px] text-mute">Results appear after your ads start running on a network.</p>
+      <p className="mt-4 text-[12px] text-mute">Results appear after your ads start running on a network.</p>
     </>
   );
 }

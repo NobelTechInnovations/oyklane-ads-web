@@ -1,6 +1,6 @@
 import { API_URL } from './client';
 import { ApiError, problemText } from './request';
-import type { Asset, Crop, Ratio } from './types';
+import type { Asset, AssetFile, Crop, Ratio } from './types';
 
 export const RATIO_LABELS: Record<Ratio, string> = {
   square: '1:1 Square',
@@ -10,9 +10,11 @@ export const RATIO_LABELS: Record<Ratio, string> = {
 };
 const SHAPES: Record<Ratio, number> = { square: 1, portrait: 4 / 5, landscape: 1200 / 628, story: 9 / 16 };
 
-/** Address of an image file. `v` changes when a crop changes, so browsers fetch the new one. */
-export const assetFileUrl = (accountId: string, asset: Asset, file: Ratio | 'original') =>
-  `${API_URL}/v1/ad-accounts/${accountId}/assets/${asset.id}/file/${file}?v=${encodeURIComponent(asset.updatedAt)}`;
+/** Address of an image file: on Azure in production, through the API in development. */
+export const assetUrl = (asset: Asset, file: AssetFile) => {
+  const url = asset.urls[file];
+  return url.startsWith('http') ? url : API_URL + url;
+};
 
 export async function uploadAsset(accountId: string, file: File): Promise<Asset> {
   const form = new FormData();

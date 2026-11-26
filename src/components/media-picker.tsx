@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/api/client';
-import { assetFileUrl, uploadAsset } from '@/api/assets';
+import { assetUrl, uploadAsset } from '@/api/assets';
 import { errorText, unwrap } from '@/api/request';
 import type { Asset, Page } from '@/api/types';
 import { Banner, Button } from '@/ui';
@@ -65,12 +65,12 @@ export function Thumbnail(props: { accountId: string; asset: Asset; selected?: b
       type="button"
       onClick={props.onClick}
       className={
-        'cursor-pointer overflow-hidden rounded-lg border text-left ' +
+        'cursor-pointer overflow-hidden rounded-md border bg-white text-left ' +
         (props.selected ? 'border-brand ring-2 ring-brand' : 'border-line hover:border-mute')
       }
     >
-      <img src={assetFileUrl(props.accountId, props.asset, 'square')} alt="" className="aspect-square w-full bg-soft object-cover" />
-      <span className="block px-2 py-1.5 text-[13px]">
+      <img src={assetUrl(props.asset, 'thumb')} alt="" loading="lazy" className="aspect-square w-full bg-soft object-cover" />
+      <span className="block px-2 py-1 text-[12px]">
         <span className="block truncate font-medium">{props.asset.name}</span>
         <span className="text-mute">
           {props.asset.width} × {props.asset.height}

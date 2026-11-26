@@ -1,11 +1,13 @@
-/* Oyklane Ads design tokens: classic ads-manager style. Shared by web and super-admin.
+/* Oyklane Ads design tokens: classic, compact ads-manager style. Shared by web and super-admin.
    Edit only in web/src/ui, then run scripts/sync-ui.sh. */
 @theme {
-  --color-ink: #111418;
+  --color-ink: #1c2b33;
   --color-mute: #65707d;
-  --color-line: #e3e6ea;
-  --color-soft: #f3f5f7;
+  --color-line: #dfe3e8;
+  --color-soft: #f2f4f6;
+  --color-page: #f5f6f8;
   --color-brand: #0b503d;
+  --color-brand-dark: #083b2d;
   --color-lime: #dcf26c;
   --color-ok: #1a7f4b;
   --color-warn: #b45f06;
@@ -14,9 +16,9 @@
 }
 
 body {
-  background: #fff;
+  background: var(--color-page);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.4;
 }

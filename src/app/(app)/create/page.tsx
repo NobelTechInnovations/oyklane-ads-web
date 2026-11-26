@@ -4,14 +4,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAccount } from '@/api/account';
-import { assetFileUrl } from '@/api/assets';
+import { assetUrl } from '@/api/assets';
 import { api } from '@/api/client';
 import { fromLocalInput, microsToInput, rupees, shortDate, toLocalInput, toMicros } from '@/api/format';
 import { ApiError, errorText, unwrap } from '@/api/request';
 import type { Ad, AdSet, Asset, AssetIssue, CallToAction, Campaign, Location, Network, Objective } from '@/api/types';
 import { AdPreview, CTA_LABELS } from '@/components/ad-preview';
+import { AiWriter } from '@/components/ai-writer';
+import { LocationPicker } from '@/components/location-picker';
 import { MediaPicker } from '@/components/media-picker';
-import { Banner, Button, Chip, Field, Modal, PageHeader, RadioOption, Section, Select, Status, TextArea, TextInput, Toggle } from '@/ui';
+import { Banner, Button, Field, Modal, RadioOption, Section, Select, Status, TextArea, TextInput, Toggle } from '@/ui';
 
 const STEPS = ['Campaign', 'Ad set', 'Ad'] as const;
 const GOALS: { value: Objective; title: string; hint: string }[] = [
@@ -32,7 +34,6 @@ const LANGUAGES = [
   ['ml', 'Malayalam'],
   ['pa', 'Punjabi'],
 ] as const;
-const PLACE_TYPES: Record<Location['type'], string> = { country: 'Country', state: 'State', city: 'City', pincode: 'PIN code' };
 const BIDS = {
   auto: 'Automatic (recommended)',
   cpc_cap: 'Cost per click limit',
@@ -77,7 +78,7 @@ const NEW_AD_SET: AdSetForm = {
   budget: '500',
   startsAt: '',
   endsAt: '',
-  locations: [{ type: 'country', value: 'IN' }],
+  locations: [{ type: 'country', value: 'IN', label: 'India' }],
   ageMin: 18,
   ageMax: 65,
   gender: 'all',
@@ -135,7 +136,6 @@ function CreateFlow() {
   const [ad, setAd] = useState<AdForm>(NEW_AD);
   const [media, setMedia] = useState<Asset[]>([]);
   const [catalog, setCatalog] = useState<Network[]>([]);
-  const [place, setPlace] = useState<Location>({ type: 'city', value: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -283,47 +283,64 @@ function CreateFlow() {
 
   const reachable = (index: number) => index === 0 || (index === 1 && ids.campaign) || (index === 2 && ids.adSet);
   const editing = (patch: Partial<AdSetForm>) => setAdSet({ ...adSet, ...patch });
-  const addPlace = () => {
-    const value = place.value.trim();
-    if (!value || adSet.locations.some((l) => l.type === place.type && l.value === value)) return;
-    editing({ locations: [...adSet.locations, { type: place.type, value }] });
-    setPlace({ ...place, value: '' });
-  };
 
   if (loading) return <p className="text-mute">Loading…</p>;
 
   return (
     <>
-      <PageHeader
-        title={editingExisting ? 'Edit ad' : 'Create ad'}
-        subtitle="Set up the campaign, then the ad set, then the ad. We format it for every network you switch on."
-      />
-      <ol className="mb-8 flex flex-wrap gap-2">
-        {STEPS.map((name, index) => (
-          <li key={name}>
-            <button
-              type="button"
-              disabled={!reachable(index)}
-              onClick={() => setStep(index)}
-              aria-current={index === step ? 'step' : undefined}
-              className={
-                'cursor-pointer rounded-full border px-4 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ' +
-                (index === step ? 'border-ink bg-ink text-white' : 'border-line text-mute')
-              }
-            >
-              {index + 1}. {name}
-            </button>
-          </li>
-        ))}
-      </ol>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">{editingExisting ? 'Edit ad' : 'Create ad'}</h1>
+          <p className="text-[13px] text-mute">Campaign › Ad set › Ad. One setup, formatted for every network you switch on.</p>
+        </div>
+        <span className="text-[12px] text-mute">{ids.ad ? 'Draft saved' : ids.campaign ? 'Saving as you go' : 'Not saved yet'}</span>
+      </div>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-14">
+      <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_380px]">
+        <nav aria-label="Steps" className="h-fit rounded-lg border border-line bg-white p-2 lg:sticky lg:top-16">
+          {STEPS.map((name, index) => {
+            const label = index === 0 ? campaign.name : index === 1 ? adSet.name : ad.name;
+            const done = index === 0 ? ids.campaign : index === 1 ? ids.adSet : ids.ad;
+            return (
+              <button
+                key={name}
+                type="button"
+                disabled={!reachable(index)}
+                onClick={() => setStep(index)}
+                aria-current={index === step ? 'step' : undefined}
+                className={
+                  'flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50 ' +
+                  (index === step ? 'bg-brand/8 text-brand' : 'hover:bg-soft') +
+                  [' w-full', ' ml-3 w-[calc(100%-12px)]', ' ml-6 w-[calc(100%-24px)]'][index]
+                }
+              >
+                <span
+                  className={
+                    'mt-0.5 grid h-4 w-4 flex-none place-items-center rounded-full text-[10px] font-bold ' +
+                    (done ? 'bg-ok text-white' : 'border border-line text-mute')
+                  }
+                >
+                  {done ? '✓' : index + 1}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-mute">{name}</span>
+                  <span className="block truncate text-[13px] font-medium">{label || 'Untitled'}</span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
         <div>
           {!canEdit ? <Banner tone="info">Your role can view this account but not change it.</Banner> : null}
 
           {step === 0 ? (
             <>
-              <Section title="What do you want people to do when they see your ad?">
+              <Section title="Campaign name">
+                <TextInput id="campaign-name" aria-label="Campaign name" value={campaign.name} maxLength={150} onChange={(e) => setCampaign({ ...campaign, name: e.target.value })} />
+              </Section>
+              <Section title="Campaign goal" hint="What do you want people to do when they see your ad?">
+                <div className="grid gap-2 sm:grid-cols-2">
                 {GOALS.map((item) => (
                   <RadioOption
                     key={item.value}
@@ -339,24 +356,22 @@ function CreateFlow() {
                     }}
                   />
                 ))}
+                </div>
               </Section>
-              <Field label="Campaign name" htmlFor="campaign-name">
-                <TextInput id="campaign-name" value={campaign.name} maxLength={150} onChange={(e) => setCampaign({ ...campaign, name: e.target.value })} />
-              </Field>
             </>
           ) : null}
 
           {step === 1 ? (
             <>
-              <Field label="Ad set name" htmlFor="ad-set-name">
-                <TextInput id="ad-set-name" value={adSet.name} maxLength={150} onChange={(e) => editing({ name: e.target.value })} />
-              </Field>
-              <Section title="Where it runs" hint="Each network you switch on gets the same ad in its own formats.">
+              <Section title="Ad set name">
+                <TextInput id="ad-set-name" aria-label="Ad set name" value={adSet.name} maxLength={150} onChange={(e) => editing({ name: e.target.value })} />
+              </Section>
+              <Section title="Networks" hint="Each network you switch on gets the same ad in its own formats.">
                 {catalog.map((network) => (
-                  <div key={network.key} className="flex items-center justify-between py-2.5">
-                    <span>
-                      {network.name}
-                      <span className="block text-sm text-mute">Minimum {rupees(network.minDailyBudget)} a day</span>
+                  <div key={network.key} className="flex items-center justify-between border-b border-line py-2 last:border-0">
+                    <span className="text-[13px]">
+                      <b>{network.name}</b>
+                      <span className="block text-[12px] text-mute">Minimum {rupees(network.minDailyBudget)} a day</span>
                     </span>
                     <Toggle
                       label={network.name}
@@ -367,38 +382,14 @@ function CreateFlow() {
                     />
                   </div>
                 ))}
-                <p className="mt-1 text-[13px] text-mute">More networks appear here as they are connected.</p>
+                <p className="mt-1 text-[12px] text-mute">Meta, Google and Oyklane stores appear here as they are connected.</p>
               </Section>
 
-              <Section title="Who sees it">
+              <Section title="Audience" hint="Who should see this ad.">
                 <Field label="Locations">
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {adSet.locations.map((l) => (
-                      <Chip key={l.type + l.value} onRemove={() => editing({ locations: adSet.locations.filter((x) => x !== l) })}>
-                        {l.type === 'country' && l.value === 'IN' ? 'India' : `${PLACE_TYPES[l.type]}: ${l.value}`}
-                      </Chip>
-                    ))}
-                    {adSet.locations.length === 0 ? <span className="text-sm text-mute">Everywhere</span> : null}
-                  </div>
-                  <div className="flex gap-2">
-                    <Select className="max-w-36" value={place.type} onChange={(e) => setPlace({ ...place, type: e.target.value as Location['type'] })}>
-                      {(['state', 'city', 'pincode'] as const).map((type) => (
-                        <option key={type} value={type}>
-                          {PLACE_TYPES[type]}
-                        </option>
-                      ))}
-                    </Select>
-                    <TextInput
-                      value={place.value}
-                      placeholder={place.type === 'pincode' ? '400001' : place.type === 'city' ? 'Jaipur' : 'Rajasthan'}
-                      maxLength={100}
-                      onChange={(e) => setPlace({ ...place, value: e.target.value })}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addPlace())}
-                    />
-                    <Button onClick={addPlace}>Add</Button>
-                  </div>
+                  <LocationPicker value={adSet.locations} onChange={(locations) => editing({ locations })} />
                 </Field>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <Field label="Age from" htmlFor="age-min">
                     <Select id="age-min" value={adSet.ageMin} onChange={(e) => editing({ ageMin: Number(e.target.value) })}>
                       {AGES.filter((a) => a <= adSet.ageMax).map((a) => (
@@ -415,9 +406,8 @@ function CreateFlow() {
                       ))}
                     </Select>
                   </Field>
-                </div>
                 <Field label="Gender">
-                  <div className="flex gap-6">
+                  <div className="flex h-[30px] items-center gap-4 text-[13px]">
                     {(['all', 'female', 'male'] as const).map((g) => (
                       <label key={g} className="flex cursor-pointer items-center gap-2">
                         <input type="radio" name="gender" className="h-4 w-4 accent-ink" checked={adSet.gender === g} onChange={() => editing({ gender: g })} />
@@ -426,6 +416,7 @@ function CreateFlow() {
                     ))}
                   </div>
                 </Field>
+                </div>
                 <Field label="Languages" hint="None chosen means all languages.">
                   <div className="flex flex-wrap gap-2">
                     {LANGUAGES.map(([code, label]) => {
@@ -436,7 +427,7 @@ function CreateFlow() {
                           type="button"
                           aria-pressed={on}
                           onClick={() => editing({ languages: on ? adSet.languages.filter((c) => c !== code) : [...adSet.languages, code] })}
-                          className={'cursor-pointer rounded-full border px-3 py-1 text-sm ' + (on ? 'border-brand bg-brand text-white' : 'border-line')}
+                          className={'cursor-pointer rounded border px-2 py-0.5 text-[12px] ' + (on ? 'border-brand bg-brand text-white' : 'border-line bg-white hover:bg-soft')}
                         >
                           {label}
                         </button>
@@ -447,6 +438,7 @@ function CreateFlow() {
               </Section>
 
               <Section title="Budget and schedule">
+                <div className="mb-3 grid gap-2 sm:grid-cols-2">
                 <RadioOption name="budget-type" value="daily" title="Daily budget" hint="Spend up to this each day" checked={adSet.budgetType === 'daily'} onChange={() => editing({ budgetType: 'daily' })} />
                 <RadioOption
                   name="budget-type"
@@ -456,20 +448,22 @@ function CreateFlow() {
                   checked={adSet.budgetType === 'lifetime'}
                   onChange={() => editing({ budgetType: 'lifetime' })}
                 />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
                 <Field label={adSet.budgetType === 'daily' ? 'Daily budget (₹)' : 'Total budget (₹)'} htmlFor="budget">
                   <TextInput id="budget" inputMode="decimal" value={adSet.budget} onChange={(e) => editing({ budget: e.target.value })} />
                 </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Start" htmlFor="starts" hint="Empty means as soon as it is approved.">
+                  <Field label="Start" htmlFor="starts" hint="Empty: when approved.">
                     <TextInput id="starts" type="datetime-local" value={adSet.startsAt} onChange={(e) => editing({ startsAt: e.target.value })} />
                   </Field>
-                  <Field label="End" htmlFor="ends" hint={adSet.budgetType === 'lifetime' ? 'Needed for a lifetime budget.' : 'Empty means until you turn it off.'}>
+                  <Field label="End" htmlFor="ends" hint={adSet.budgetType === 'lifetime' ? 'Needed for a lifetime budget.' : 'Empty: until turned off.'}>
                     <TextInput id="ends" type="datetime-local" value={adSet.endsAt} onChange={(e) => editing({ endsAt: e.target.value })} />
                   </Field>
                 </div>
               </Section>
 
               <Section title="Bidding">
+                <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Bid strategy" htmlFor="bid">
                   <Select id="bid" value={adSet.bidStrategy} onChange={(e) => editing({ bidStrategy: e.target.value as AdSetForm['bidStrategy'] })}>
                     {Object.entries(BIDS).map(([value, label]) => (
@@ -484,25 +478,26 @@ function CreateFlow() {
                     <TextInput id="bid-amount" inputMode="decimal" value={adSet.bidAmount} onChange={(e) => editing({ bidAmount: e.target.value })} />
                   </Field>
                 ) : null}
+                </div>
               </Section>
             </>
           ) : null}
 
           {step === 2 ? (
             <>
-              <Field label="Ad name" htmlFor="ad-name">
-                <TextInput id="ad-name" value={ad.name} maxLength={150} onChange={(e) => setAd({ ...ad, name: e.target.value })} />
-              </Field>
+              <Section title="Ad name">
+                <TextInput id="ad-name" aria-label="Ad name" value={ad.name} maxLength={150} onChange={(e) => setAd({ ...ad, name: e.target.value })} />
+              </Section>
               <Section title={`Media (up to ${limits.media})`} hint="With more images, networks show the best performing ones more often.">
-                <div className="mt-3 flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {media.map((asset) => (
                     <div key={asset.id} className="relative">
-                      <img src={assetFileUrl(accountId, asset, 'square')} alt={asset.name} className="h-24 w-24 rounded-[10px] border border-line object-cover" />
+                      <img src={assetUrl(asset, 'square')} alt={asset.name} className="h-20 w-20 rounded-md border border-line object-cover" />
                       <button
                         type="button"
                         aria-label={`Remove ${asset.name}`}
                         onClick={() => setMedia(media.filter((a) => a.id !== asset.id))}
-                        className="absolute -right-2 -top-2 grid h-6 w-6 cursor-pointer place-items-center rounded-full border border-line bg-white text-sm"
+                        className="absolute -right-1.5 -top-1.5 grid h-5 w-5 cursor-pointer place-items-center rounded-full border border-line bg-white text-[12px]"
                       >
                         ×
                       </button>
@@ -512,7 +507,7 @@ function CreateFlow() {
                     <button
                       type="button"
                       onClick={() => setPicking(true)}
-                      className="grid h-24 w-24 cursor-pointer place-items-center rounded-[10px] border border-dashed border-mute text-2xl text-mute"
+                      className="grid h-20 w-20 cursor-pointer place-items-center rounded-md border border-dashed border-mute text-xl text-mute hover:bg-soft"
                       aria-label="Add media"
                     >
                       +
@@ -520,6 +515,28 @@ function CreateFlow() {
                   ) : null}
                 </div>
               </Section>
+              <Section
+                title="Write with AI"
+                hint="Describe what you sell; pick the lines you like."
+              >
+                <AiWriter
+                  accountId={accountId}
+                  objective={campaign.objective}
+                  networks={adSet.networks}
+                  businessName={organisationName}
+                  destinationUrl={ad.destinationUrl}
+                  initialProduct={campaign.name === goalName(campaign.objective) ? '' : campaign.name}
+                  onUseText={(text) => setAd({ ...ad, primaryText: text.slice(0, limits.text) })}
+                  onUseHeadline={(text) => {
+                    const empty = ad.headlines.findIndex((h) => !h.trim());
+                    if (empty >= 0) setAd({ ...ad, headlines: ad.headlines.map((h, i) => (i === empty ? text : h)) });
+                    else if (ad.headlines.length < limits.headlines) setAd({ ...ad, headlines: [...ad.headlines, text] });
+                    else setAd({ ...ad, headlines: [...ad.headlines.slice(0, -1), text] });
+                  }}
+                  onUseDescription={(text) => setAd({ ...ad, description: text.slice(0, limits.description) })}
+                />
+              </Section>
+              <Section title="Text and link">
               <Field label="Main text" htmlFor="primary" hint={`${ad.primaryText.length} / ${limits.text}`}>
                 <TextArea id="primary" value={ad.primaryText} maxLength={limits.text} placeholder="Tell people what you're offering" onChange={(e) => setAd({ ...ad, primaryText: e.target.value })} />
               </Field>
@@ -541,7 +558,7 @@ function CreateFlow() {
                   </div>
                 ))}
                 {ad.headlines.length < limits.headlines ? (
-                  <button type="button" onClick={() => setAd({ ...ad, headlines: [...ad.headlines, ''] })} className="cursor-pointer text-sm font-medium text-brand">
+                  <button type="button" onClick={() => setAd({ ...ad, headlines: [...ad.headlines, ''] })} className="cursor-pointer text-[12px] font-semibold text-brand">
                     + Add headline
                   </button>
                 ) : null}
@@ -549,7 +566,7 @@ function CreateFlow() {
               <Field label="Description" htmlFor="description" hint={`${ad.description.length} / ${limits.description}`}>
                 <TextInput id="description" value={ad.description} maxLength={limits.description} onChange={(e) => setAd({ ...ad, description: e.target.value })} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Call to action" htmlFor="cta">
                   <Select id="cta" value={ad.cta} onChange={(e) => setAd({ ...ad, cta: e.target.value as CallToAction })}>
                     {Object.entries(CTA_LABELS).map(([value, label]) => (
@@ -563,14 +580,14 @@ function CreateFlow() {
                   <TextInput id="url" type="url" value={ad.destinationUrl} placeholder="https://" onChange={(e) => setAd({ ...ad, destinationUrl: e.target.value })} />
                 </Field>
               </div>
+              </Section>
             </>
           ) : null}
 
-          <div className="mt-4">
+          <div className="sticky bottom-0 z-10 -mx-1 mt-3 rounded-lg border border-line bg-white/95 px-3 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] backdrop-blur">
             {error ? <Banner tone="danger">{error}</Banner> : null}
             {notice ? <Banner tone="ok">{notice}</Banner> : null}
-          </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {step > 0 ? <Button onClick={() => setStep(step - 1)}>Back</Button> : null}
             {step === 0 ? (
               <Button variant="primary" disabled={!canEdit || saving} onClick={saveCampaign}>
@@ -592,12 +609,14 @@ function CreateFlow() {
                 </Button>
               </>
             ) : null}
+            {step === 2 ? <span className="text-[12px] text-mute">Submitting to networks for review comes in the next update.</span> : null}
           </div>
-          {step === 2 ? <p className="mt-3 text-[13px] text-mute">Submitting to networks for review comes in the next update.</p> : null}
+          </div>
         </div>
 
-        <aside className="lg:border-l lg:border-line lg:pl-12">
-          <h2 className="mb-3 text-lg font-bold">Preview ad</h2>
+        <aside className="h-fit space-y-3 lg:col-span-2 xl:sticky xl:top-16 xl:col-span-1">
+          <div className="rounded-lg border border-line bg-white p-3">
+          <h2 className="mb-2 text-[14px] font-semibold">Ad preview</h2>
           <AdPreview
             accountId={accountId}
             pageName={organisationName}
@@ -608,20 +627,27 @@ function CreateFlow() {
             cta={ad.cta}
             destinationUrl={ad.destinationUrl}
           />
-          {step === 2 ? <Readiness networks={chosen} media={media} ad={ad} /> : null}
-          <h2 className="mt-7 text-lg font-bold">Summary</h2>
-          <dl className="mt-2 text-sm">
+          </div>
+          {step === 2 ? (
+            <div className="rounded-lg border border-line bg-white p-3">
+              <Readiness networks={chosen} media={media} ad={ad} />
+            </div>
+          ) : null}
+          <div className="rounded-lg border border-line bg-white p-3">
+          <h2 className="text-[14px] font-semibold">Summary</h2>
+          <dl className="mt-1 text-[13px]">
             <Row label="Goal">{goalName(campaign.objective).replace(' campaign', '')}</Row>
             <Row label={adSet.budgetType === 'daily' ? 'Daily budget' : 'Total budget'}>{rupees(toMicros(adSet.budget))}</Row>
             <Row label="Runs">
               {adSet.startsAt ? shortDate(fromLocalInput(adSet.startsAt)) : 'When approved'} – {adSet.endsAt ? shortDate(fromLocalInput(adSet.endsAt)) : 'until turned off'}
             </Row>
             <Row label="Audience">
-              {adSet.locations.length} location{adSet.locations.length === 1 ? '' : 's'}, {adSet.ageMin}–{adSet.ageMax === 65 ? '65+' : adSet.ageMax}
+              {adSet.locations.length ? adSet.locations.map((l) => l.label ?? l.value).slice(0, 2).join('; ') + (adSet.locations.length > 2 ? ` +${adSet.locations.length - 2}` : '') : 'Anywhere'}, {adSet.ageMin}–{adSet.ageMax === 65 ? '65+' : adSet.ageMax}
               {adSet.gender === 'all' ? '' : adSet.gender === 'female' ? ', women' : ', men'}
             </Row>
             <Row label="Networks">{chosen.map((n) => n.name).join(', ') || 'None yet'}</Row>
           </dl>
+          </div>
         </aside>
       </div>
 
@@ -636,7 +662,7 @@ function CreateFlow() {
 
 function Row(props: { label: string; children: ReactNode }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-line py-2">
+    <div className="flex justify-between gap-4 border-b border-line py-1.5 last:border-0">
       <dt className="text-mute">{props.label}</dt>
       <dd className="text-right">{props.children}</dd>
     </div>
@@ -648,7 +674,7 @@ function Readiness(props: { networks: Network[]; media: Asset[]; ad: AdForm }) {
   if (props.networks.length === 0) return null;
   return (
     <>
-      <h2 className="mt-7 text-lg font-bold">Ready for each network</h2>
+      <h2 className="text-[14px] font-semibold">Ready for each network</h2>
       {props.networks.map((network) => {
         const issues: Pick<AssetIssue, 'severity' | 'message'>[] = [];
         if (props.media.length === 0) issues.push({ severity: 'error', message: 'Add at least one image.' });
@@ -663,7 +689,7 @@ function Readiness(props: { networks: Network[]; media: Asset[]; ad: AdForm }) {
         }
         const blocking = issues.some((i) => i.severity === 'error');
         return (
-          <div key={network.key} className="mt-3">
+          <div key={network.key} className="mt-2">
             <Status tone={blocking ? 'danger' : issues.length ? 'warn' : 'ok'}>
               <b>{network.name}</b> · {blocking ? 'Not ready' : 'Ready'}
             </Status>

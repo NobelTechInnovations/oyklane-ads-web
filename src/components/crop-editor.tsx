@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { api } from '@/api/client';
-import { assetFileUrl, centreCrop, RATIO_LABELS, shapeOf } from '@/api/assets';
+import { assetUrl, centreCrop, RATIO_LABELS, shapeOf } from '@/api/assets';
 import { errorText, unwrap } from '@/api/request';
 import type { Asset, Crop, Ratio } from '@/api/types';
 import { Banner, Button, Tabs } from '@/ui';
@@ -91,7 +91,7 @@ export function CropEditor(props: { accountId: string; asset: Asset; onSaved: (a
         className="relative mx-auto select-none overflow-hidden rounded-lg bg-soft"
         style={{ width: asset.width * scale, height: asset.height * scale }}
       >
-        <img src={assetFileUrl(props.accountId, asset, 'original')} alt="" draggable={false} className="h-full w-full" />
+        <img src={assetUrl(asset, 'original')} alt="" draggable={false} className="h-full w-full" />
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}

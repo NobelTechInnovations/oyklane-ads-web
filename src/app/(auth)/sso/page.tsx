@@ -23,7 +23,7 @@ export default function SsoPage() {
       return;
     }
     unwrap(api.POST('/v1/auth/oyklane', { body: { token } }))
-      .then(() => router.replace('/'))
+      .then(() => router.replace('/home'))
       .catch((caught) => setError(errorText(caught)));
   }, [router]);
 

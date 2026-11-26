@@ -57,13 +57,13 @@ export function AuthForm(props: {
 
   return (
     <form onSubmit={submit} noValidate={false}>
-      <h1 className="text-2xl font-bold">{props.title}</h1>
-      {props.intro ? <p className="mt-1.5 text-mute">{props.intro}</p> : null}
+      <h1 className="text-xl font-bold">{props.title}</h1>
+      {props.intro ? <p className="mt-1 text-[13px] text-mute">{props.intro}</p> : null}
       {props.notice ? <p className="mt-4 rounded-lg bg-soft px-3.5 py-2.5 text-sm">{props.notice}</p> : null}
-      <div className="mt-6 space-y-4">
+      <div className="mt-5 space-y-3">
         {props.fields.map((field) => (
           <label key={field.name} className="block">
-            <span className="mb-1.5 block text-sm font-semibold">{field.label}</span>
+            <span className="mb-1 block text-[12px] font-semibold">{field.label}</span>
             <input
               name={field.name}
               type={field.type ?? 'text'}
@@ -74,7 +74,7 @@ export function AuthForm(props: {
               maxLength={field.code ? 6 : 200}
               value={valueOf(field.name)}
               onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
-              className="w-full rounded-lg border border-line px-3 py-2.5 outline-none focus:border-brand"
+              className="w-full rounded-md border border-line px-3 py-2 text-[14px] outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
             />
             {field.hint ? <span className="mt-1 block text-sm text-mute">{field.hint}</span> : null}
           </label>
@@ -85,7 +85,7 @@ export function AuthForm(props: {
           {error}
         </p>
       ) : null}
-      <div className="mt-6">
+      <div className="mt-5">
         <Button type="submit" variant="primary" block disabled={busy}>
           {busy ? 'Please wait…' : props.submitLabel}
         </Button>

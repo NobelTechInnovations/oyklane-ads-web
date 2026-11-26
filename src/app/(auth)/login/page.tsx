@@ -27,7 +27,7 @@ export default function LoginPage() {
       submitLabel="Log in"
       onSubmit={async (values) => {
         const { error } = await api.POST('/v1/auth/login', { body: values as never });
-        if (!error) return router.replace('/');
+        if (!error) return router.replace('/home');
         if (String((error as { type?: string }).type).endsWith('identity.email_not_verified')) {
           await api.POST('/v1/auth/resend-code', { body: { email: values.email } as never });
           return router.push('/verify?email=' + encodeURIComponent(values.email ?? ''));
